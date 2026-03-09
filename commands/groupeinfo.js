@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'groupinfo',
+    category: '👥 Groupe',
     description: "Affiche des informations de DÉBOGAGE sur le groupe et le statut du bot.",
     adminOnly: false,
     run: async ({ sock, msg, replyWithTag }) => {

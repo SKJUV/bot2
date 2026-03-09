@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'about',
+    category: 'ℹ️ Utilitaires',
     description: 'Affiche une carte de visite stylisée du bot et de son créateur.',
     adminOnly: false,
     run: async ({ sock, msg, replyWithTag }) => {

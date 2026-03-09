@@ -2,6 +2,7 @@
 
 module.exports = {
     name: 'tagall',
+    category: '👥 Groupe',
     aliases: ['mentionall', 'tous', 'annonce'], // Ajout de "annonce" qui correspond bien à l'usage
     description: 'Notifie tous les membres du groupe sans afficher la liste des mentions.',
     ownerOnly: true,

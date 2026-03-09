@@ -12,6 +12,7 @@ function formatUptime(ms) {
 const log = require('../logger')(module);
 module.exports = {
     name: 'info',
+    category: 'ℹ️ Utilitaires',
     description: 'Affiche des informations et statistiques sur le bot.',
     adminOnly: false,
     run: async ({ sock, msg, db, startTime }) => {

@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const db = require('./database');
 const { initCookies } = require('./utils/cookies');
+const { checkCooldown } = require('./utils/cooldown');
 const startTime = new Date();
 
 // Initialise les cookies YouTube si disponibles (résout le blocage sur Render/Railway)
@@ -111,15 +112,23 @@ async function startBot() {
 // index.js (Version modifiée)
 
             if (BANNED_NUMBERS.includes(senderNumber)) {
-                // On envoie le message de bannissement
                 await replyWithTag(sock, remoteJid, msg, "🚫 Vous avez été banni(e) par le propriétaire du bot. Vous ne pouvez plus utiliser les commandes." + "\n\n" + "go causer ib avec le boss c'est pas moi qui fais 🥲🥲");
-                // On arrête l'exécution pour cet utilisateur
                 return;
             }
 
             const isOwner = OWNER_NUMBERS.includes(senderNumber);
             const isAdminInDb = await db.isUserAdmin(senderId);
             const isExempt = isOwner || isAdminInDb;
+
+            // --- Anti-spam : cooldown entre les commandes ---
+            if (!isExempt) {
+                const { blocked, remaining } = checkCooldown(senderNumber);
+                if (blocked) {
+                    const secs = (remaining / 1000).toFixed(1);
+                    await replyWithTag(sock, remoteJid, msg, `⏳ Doucement ! Attends encore *${secs}s* avant d'envoyer une autre commande.`);
+                    return;
+                }
+            }
 
             if (!UNLIMITED_MODE && !isExempt) {
                 const user = await db.getOrRegisterUser(senderId, msg.pushName || "Unknown");
@@ -149,8 +158,15 @@ async function startBot() {
             }
             
             console.log(`[EXECUTION] Tentative d'exécution de la commande "${commandName}" par ${senderId}`);
-            await command.run({ sock, msg, args, replyWithTag, commands, db, startTime, senderNumber, senderId }); 
+
+            // ⏳ Réaction "en cours" avant l'exécution
+            await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } }).catch(() => {});
+
+            await command.run({ sock, msg, args, replyWithTag, commands, aliases, db, startTime, senderNumber, senderId }); 
             console.log(`[EXECUTION] Succès de la commande "${commandName}"`);
+
+            // ✅ Réaction "succès" après l'exécution
+            await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } }).catch(() => {});
 
             if (!UNLIMITED_MODE && !isExempt) {
                 await db.incrementCommandCount(senderId);
@@ -166,6 +182,9 @@ async function startBot() {
             console.error("Stack de l'erreur:", err.stack);
             console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
             
+            // ❌ Réaction "erreur"
+            await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } }).catch(() => {});
+
             try {
                 await replyWithTag(sock, remoteJid, msg, "❌ Oups ! Une erreur critique est survenue. Le développeur a été notifié.");
             } catch (replyError) {

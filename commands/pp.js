@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'pp',
+    category: '🎵 Multimédia',
     description: "Affiche la photo de profil d'un utilisateur en haute qualité.",
     aliases: ['profil', 'pdp'], // Ajout d'alias pour la commande
     adminOnly: false,

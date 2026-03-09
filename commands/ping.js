@@ -2,6 +2,7 @@
 const log = require('../logger')(module);
 module.exports = {
     name: 'ping',
+    category: 'ℹ️ Utilitaires',
     description: 'Vérifie si le bot est en ligne.',
     adminOnly: false,
     run: async ({ sock, msg, replyWithTag }) => {

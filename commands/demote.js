@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'demote',
+    category: '👥 Groupe',
     description: "Retire le statut d'admin d'un membre.",
     adminOnly: true,
     run: async ({ sock, msg, replyWithTag }) => {

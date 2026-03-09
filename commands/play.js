@@ -72,6 +72,7 @@ function isExplicit(text) {
 
 module.exports = {
     name: 'play',
+    category: '🎵 Multimédia',
     description: "Recherche et envoie une chanson depuis YouTube.",
     adminOnly: false,
     run: async ({ sock, msg, args, replyWithTag }) => {

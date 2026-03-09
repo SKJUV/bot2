@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'promote',
+    category: '👥 Groupe',
     description: "Nomme un membre 'admin' du groupe.",
     adminOnly: true,
     run: async ({ sock, msg, replyWithTag }) => {

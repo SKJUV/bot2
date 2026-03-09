@@ -11,6 +11,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 module.exports = {
     name: 'sticker',
+    category: '🎵 Multimédia',
     description: 'Crée un sticker à partir d\'une image ou d\'un GIF.',
     adminOnly: false,
     run: async ({ sock, msg, replyWithTag }) => {

@@ -9,6 +9,7 @@ const groupRecapMessage = process.env.GROUP_WELCOME_MESSAGE || `📋 *Bienvenue 
 
 module.exports = {
     name: 'add',
+    category: '👥 Groupe',
     description: "Ajoute un membre au groupe.",
     adminOnly: true,
     run: async ({ sock, msg, args, replyWithTag }) => {

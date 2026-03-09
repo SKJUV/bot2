@@ -10,6 +10,7 @@ const { getCookieOptions } = require('../utils/cookies');
 
 module.exports = {
     name: 'deo',
+    category: '🎵 Multimédia',
     description: "Recherche et envoie une vidéo YouTube optimisée pour le poids.",
     aliases: ['video', 'vid'],
     adminOnly: false,

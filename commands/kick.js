@@ -3,6 +3,7 @@ const log = require('../logger')(module);
 
 module.exports = {
     name: 'kick',
+    category: '👥 Groupe',
     description: "Retire un membre du groupe.",
     adminOnly: true,
     run: async ({ sock, msg, replyWithTag }) => {

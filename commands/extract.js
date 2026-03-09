@@ -5,6 +5,7 @@ const log = (...args) => console.log('[EXTRACT]', ...args);
 
 module.exports = {
     name: 'extract',
+    category: '🎵 Multimédia',
     description: "Extrait et renvoie un média 'vue unique' dans la discussion actuelle.",
     
     // On n'a plus besoin de "senderId" ou "senderNumber", juste des infos de base.
