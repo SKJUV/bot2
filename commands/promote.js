@@ -6,6 +6,7 @@ module.exports = {
     category: '👥 Groupe',
     description: "Nomme un membre 'admin' du groupe.",
     adminOnly: true,
+    groupAction: true,
     run: async ({ sock, msg, replyWithTag }) => {
         const remoteJid = msg.key.remoteJid;
 

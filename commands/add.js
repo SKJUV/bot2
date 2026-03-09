@@ -12,6 +12,7 @@ module.exports = {
     category: '👥 Groupe',
     description: "Ajoute un membre au groupe.",
     adminOnly: true,
+    groupAction: true,
     run: async ({ sock, msg, args, replyWithTag }) => {
         const remoteJid = msg.key.remoteJid;
         const delay = ms => new Promise(res => setTimeout(res, ms)); // Fonction de pause

@@ -6,6 +6,7 @@ module.exports = {
     category: '👥 Groupe',
     description: "Retire le statut d'admin d'un membre.",
     adminOnly: true,
+    groupAction: true,
     run: async ({ sock, msg, replyWithTag }) => {
         const remoteJid = msg.key.remoteJid;
 

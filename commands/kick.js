@@ -6,6 +6,7 @@ module.exports = {
     category: '👥 Groupe',
     description: "Retire un membre du groupe.",
     adminOnly: true,
+    groupAction: true,
     run: async ({ sock, msg, replyWithTag }) => {
         const remoteJid = msg.key.remoteJid;
         const delay = ms => new Promise(res => setTimeout(res, ms));
