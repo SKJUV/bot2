@@ -10,8 +10,9 @@ module.exports = {
     ownerOnly: true,
     run: async ({ sock, msg, args, replyWithTag }) => {
         const ownerJid = getOwnerJid();
+        const remoteJid = msg.key.remoteJid;
         if (!ownerJid) {
-            return replyWithTag(sock, msg.key.remoteJid, msg, '❌ Aucun numéro owner configuré.');
+            return replyWithTag(sock, remoteJid, msg, '❌ Aucun numéro owner configuré.');
         }
 
         const PREFIX = process.env.PREFIX || '.';
@@ -21,7 +22,7 @@ module.exports = {
         if (!sub || sub === 'list') {
             const pending = getPendingViewOnce();
             if (pending.size === 0) {
-                return replyWithTag(sock, ownerJid, msg, '📭 Aucune vue unique en attente.\n\n_Les vues uniques sont stockées pendant 24h._');
+                return replyWithTag(sock, remoteJid, msg, '📭 Aucune vue unique en attente.\n\n_Les vues uniques sont stockées pendant 24h._');
             }
 
             const lines = ['╭───≼ 👁️ *Vues uniques en attente* ≽───╮', '│'];
@@ -40,21 +41,21 @@ module.exports = {
             lines.push(`│  ◈ \`${PREFIX}vo clear\` — Vider la liste`);
             lines.push('╰───≼ 👁️ ≽───╯');
 
-            return replyWithTag(sock, ownerJid, msg, lines.join('\n'));
+            return replyWithTag(sock, remoteJid, msg, lines.join('\n'));
         }
 
         // ── .vo all — extraire toutes les vues uniques ──
         if (sub === 'all') {
             const pending = getPendingViewOnce();
             if (pending.size === 0) {
-                return replyWithTag(sock, ownerJid, msg, '📭 Aucune vue unique en attente.');
+                return replyWithTag(sock, remoteJid, msg, '📭 Aucune vue unique en attente.');
             }
 
             let extracted = 0;
             let failed = 0;
             for (const [id, vo] of pending) {
                 try {
-                    await sendExtractedMedia(sock, ownerJid, vo);
+                    await sendExtractedMedia(sock, remoteJid, vo);
                     deleteViewOnce(id);
                     extracted++;
                 } catch (e) {
@@ -65,20 +66,20 @@ module.exports = {
 
             let result = `✅ *${extracted}* vue(s) unique(s) extraite(s).`;
             if (failed > 0) result += `\n⚠️ ${failed} échec(s).`;
-            return replyWithTag(sock, ownerJid, msg, result);
+            return replyWithTag(sock, remoteJid, msg, result);
         }
 
         // ── .vo clear — vider toute la liste ──
         if (sub === 'clear') {
             const count = getPendingViewOnce().size;
             getPendingViewOnce().clear();
-            return replyWithTag(sock, ownerJid, msg, `🧹 *${count}* vue(s) unique(s) supprimée(s).`);
+            return replyWithTag(sock, remoteJid, msg, `🧹 *${count}* vue(s) unique(s) supprimée(s).`);
         }
 
         // ── .vo <id> — extraire une vue unique spécifique ──
         const id = parseInt(sub);
         if (isNaN(id)) {
-            return replyWithTag(sock, ownerJid, msg, [
+            return replyWithTag(sock, remoteJid, msg, [
                 `❌ Commande inconnue : *${sub}*`,
                 ``,
                 `💡 *Usage :*`,
@@ -91,15 +92,15 @@ module.exports = {
 
         const vo = getViewOnceById(id);
         if (!vo) {
-            return replyWithTag(sock, ownerJid, msg, `❌ Vue unique *#${id}* introuvable ou expirée (24h max).`);
+            return replyWithTag(sock, remoteJid, msg, `❌ Vue unique *#${id}* introuvable ou expirée (24h max).`);
         }
 
         try {
-            await sendExtractedMedia(sock, ownerJid, vo);
+            await sendExtractedMedia(sock, remoteJid, vo);
             deleteViewOnce(id);
         } catch (e) {
             console.error(`[VO] Erreur extraction #${id}:`, e);
-            await replyWithTag(sock, ownerJid, msg, `⚠️ Impossible d'extraire la vue unique *#${id}*. Le média est peut-être trop ancien.`);
+            await replyWithTag(sock, remoteJid, msg, `⚠️ Impossible d'extraire la vue unique *#${id}*. Le média est peut-être trop ancien.`);
         }
     }
 };
@@ -107,7 +108,7 @@ module.exports = {
 /**
  * Envoie un média vue unique extrait au owner dans son IB.
  */
-async function sendExtractedMedia(sock, ownerJid, vo) {
+async function sendExtractedMedia(sock, targetJid, vo) {
     const buffer = await extractViewOnceBuffer(vo);
     if (buffer.length === 0) throw new Error('Buffer vide');
 
@@ -120,12 +121,12 @@ async function sendExtractedMedia(sock, ownerJid, vo) {
     ].join('\n');
 
     if (vo.type === 'image') {
-        await sock.sendMessage(ownerJid, { image: buffer, caption });
+        await sock.sendMessage(targetJid, { image: buffer, caption });
     } else if (vo.type === 'video') {
-        await sock.sendMessage(ownerJid, { video: buffer, caption });
+        await sock.sendMessage(targetJid, { video: buffer, caption });
     } else if (vo.type === 'audio') {
-        await sock.sendMessage(ownerJid, { audio: buffer, mimetype: 'audio/mp4' });
+        await sock.sendMessage(targetJid, { audio: buffer, mimetype: 'audio/mp4' });
         // Envoyer la légende séparément pour l'audio
-        await sock.sendMessage(ownerJid, { text: caption });
+        await sock.sendMessage(targetJid, { text: caption });
     }
 }

@@ -2,7 +2,6 @@
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { getMessages, clearBuffer, listBuffers, formatForAI } = require('../utils/groupBuffer');
-const { getOwnerJid } = require('../utils/assistant');
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -13,19 +12,19 @@ module.exports = {
     aliases: ['summary', 'recap', 'résumé'],
     ownerOnly: true,
     run: async ({ sock, msg, args, replyWithTag }) => {
-        const ownerJid = getOwnerJid() || msg.key.remoteJid;
+        const remoteJid = msg.key.remoteJid;
         const PREFIX = process.env.PREFIX || '.';
         const sub = (args[0] || '').toLowerCase();
 
         if (!apiKey) {
-            return replyWithTag(sock, ownerJid, msg, "❌ Clé API Gemini non configurée.");
+            return replyWithTag(sock, remoteJid, msg, "❌ Clé API Gemini non configurée.");
         }
 
         // ── .resume list — voir les groupes avec des messages ──
         if (!sub || sub === 'list') {
             const buffers = listBuffers();
             if (buffers.length === 0) {
-                return replyWithTag(sock, ownerJid, msg, "📭 Aucun message de groupe enregistré.\n\n_Le bot stocke les messages dès qu'il est en ligne. Attends un peu que les groupes soient actifs._");
+                return replyWithTag(sock, remoteJid, msg, "📭 Aucun message de groupe enregistré.\n\n_Le bot stocke les messages dès qu'il est en ligne. Attends un peu que les groupes soient actifs._");
             }
 
             // Résoudre les noms de groupes
@@ -46,7 +45,7 @@ module.exports = {
             lines.push(`│  ◈ \`${PREFIX}resume clear 1\` — Vider le buffer`);
             lines.push('╰───≼ 📊 ≽───╯');
 
-            return replyWithTag(sock, ownerJid, msg, lines.join('\n'));
+            return replyWithTag(sock, remoteJid, msg, lines.join('\n'));
         }
 
         // ── .resume clear <n> — vider un buffer ──
@@ -54,10 +53,10 @@ module.exports = {
             const idx = parseInt(args[1]) - 1;
             const buffers = listBuffers();
             if (isNaN(idx) || idx < 0 || idx >= buffers.length) {
-                return replyWithTag(sock, ownerJid, msg, `❌ Usage : \`${PREFIX}resume clear <numéro>\``);
+                return replyWithTag(sock, remoteJid, msg, `❌ Usage : \`${PREFIX}resume clear <numéro>\``);
             }
             clearBuffer(buffers[idx].groupJid);
-            return replyWithTag(sock, ownerJid, msg, `🧹 Buffer du groupe #${idx + 1} vidé.`);
+            return replyWithTag(sock, remoteJid, msg, `🧹 Buffer du groupe #${idx + 1} vidé.`);
         }
 
         // ── .resume all — résumé de tous les groupes ──
@@ -65,7 +64,7 @@ module.exports = {
             const maxAge = parseInt(args[1]) || 360;
             const buffers = listBuffers();
             if (buffers.length === 0) {
-                return replyWithTag(sock, ownerJid, msg, "📭 Aucun message enregistré.");
+                return replyWithTag(sock, remoteJid, msg, "📭 Aucun message enregistré.");
             }
 
             for (let i = 0; i < buffers.length; i++) {
@@ -76,7 +75,7 @@ module.exports = {
                 if (messages.length < 3) continue;
                 
                 const summary = await generateSummary(messages, groupName);
-                await replyWithTag(sock, ownerJid, msg, summary);
+                await replyWithTag(sock, remoteJid, msg, summary);
                 // Délai pour éviter le rate limit
                 await new Promise(r => setTimeout(r, 2000));
             }
@@ -89,7 +88,7 @@ module.exports = {
 
         const buffers = listBuffers();
         if (isNaN(groupIndex) || groupIndex < 0 || groupIndex >= buffers.length) {
-            return replyWithTag(sock, ownerJid, msg, `❌ Groupe introuvable. Tape \`${PREFIX}resume\` pour voir la liste.`);
+            return replyWithTag(sock, remoteJid, msg, `❌ Groupe introuvable. Tape \`${PREFIX}resume\` pour voir la liste.`);
         }
 
         const target = buffers[groupIndex];
@@ -98,11 +97,11 @@ module.exports = {
 
         const { messages } = getMessages(target.groupJid, maxAge);
         if (messages.length < 3) {
-            return replyWithTag(sock, ownerJid, msg, `📭 Pas assez de messages dans *${groupName}* (${messages.length} messages sur les ${maxAge} dernières minutes).`);
+            return replyWithTag(sock, remoteJid, msg, `\ud83d\udced Pas assez de messages dans *${groupName}* (${messages.length} messages sur les ${maxAge} dernières minutes).`);
         }
 
         const summary = await generateSummary(messages, groupName);
-        await replyWithTag(sock, ownerJid, msg, summary);
+        await replyWithTag(sock, remoteJid, msg, summary);
     }
 };
 
