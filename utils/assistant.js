@@ -82,24 +82,25 @@ async function extractViewOnceBuffer(vo) {
 
 /**
  * Crée un proxy sur l'objet sock qui redirige les messages
- * d'un groupe vers le DM du owner (mode assistant).
- * Les réactions restent sur le message original.
- * Les appels non-sendMessage (groupParticipantsUpdate, etc.) ne sont pas affectés.
+ * vers le DM du owner (mode assistant).
+ * - Redirige les envois vers un groupe OU un LID vers ownerJid
+ * - Les réactions restent sur le message original
+ * - Les appels non-sendMessage ne sont pas affectés
  */
-function createSockProxy(sock, groupJid, ownerJid) {
+function createSockProxy(sock, originalJid, ownerJid) {
     return new Proxy(sock, {
         get(target, prop, receiver) {
             if (prop === 'sendMessage') {
                 return function (jid, content, options) {
-                    // Les réactions restent sur le message original (dans le groupe)
+                    // Les réactions restent sur le message original
                     if (content?.react) {
                         return target.sendMessage(jid, content, options);
                     }
-                    // Redirige les messages destinés au groupe vers le DM du owner
-                    if (jid === groupJid) {
+                    // Redirige les messages destinés au chat original (groupe OU LID) vers le owner
+                    if (jid === originalJid || jid.endsWith('@lid')) {
+                        console.log(`[PROXY] Redirection ${jid} → ${ownerJid}`);
                         return target.sendMessage(ownerJid, content);
                     }
-                    // Autres destinations : pas de redirection
                     return target.sendMessage(jid, content, options);
                 };
             }

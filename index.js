@@ -11,6 +11,7 @@ const { initCookies } = require('./utils/cookies');
 const { checkCooldown } = require('./utils/cooldown');
 const botConfig = require('./utils/config');
 const { getOwnerJid, detectViewOnce, storeViewOnce, createSockProxy } = require('./utils/assistant');
+const { pushMessage } = require('./utils/groupBuffer');
 const startTime = new Date();
 
 // Initialise les cookies YouTube si disponibles
@@ -60,7 +61,13 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: "warn" }),
+        // Ne pas synchroniser l'historique complet (réduit le spam de messages anciens)
+        syncFullHistory: process.env.SYNC_FULL_HISTORY === 'true',
     });
+
+    // --- Flag pour ignorer les anciens messages ---
+    let botReady = false;
+    const PROCESS_OLD = process.env.PROCESS_OLD_MESSAGES === 'true';
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
@@ -71,12 +78,24 @@ async function startBot() {
             console.log("------------------------------------------------");
         }
         if (connection === "close") {
+            botReady = false;
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("Connexion fermée:", lastDisconnect.error, ", reconnexion:", shouldReconnect);
             if (shouldReconnect) startBot();
         } else if (connection === "open") {
             const mode = botConfig.get('assistantMode') ? '🔒 Assistant' : '🌐 Public';
             console.log(`✅ Bot WhatsApp connecté ! Mode : ${mode}`);
+            if (PROCESS_OLD) {
+                botReady = true;
+                console.log('[SYNC] Traitement des anciens messages activé.');
+            } else {
+                // Attendre 5s que le batch de messages offline se vide, puis activer
+                console.log('[SYNC] Ignorer les anciens messages (5s de grâce)...');
+                setTimeout(() => {
+                    botReady = true;
+                    console.log('[SYNC] ✅ Bot prêt — seuls les nouveaux messages seront traités.');
+                }, 5000);
+            }
         }
     });
 
@@ -87,6 +106,10 @@ async function startBot() {
     // ============================================================
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
         if (type !== "notify" || !messages[0]?.message) return;
+
+        // --- Ignorer les messages arrivés avant que le bot soit prêt ---
+        if (!botReady) return;
+
         const msg = messages[0];
         const m = msg.message;
         const remoteJid = msg.key.remoteJid;
@@ -133,6 +156,12 @@ async function startBot() {
             || m.imageMessage?.caption
             || m.videoMessage?.caption;
 
+        // ── ÉTAPE 2.5 : Stocker les messages de groupe pour .resume ──
+        if (isGroup && messageContent && !msg.key.fromMe) {
+            const gpSender = (msg.key.participant || '').split('@')[0];
+            pushMessage(remoteJid, gpSender, msg.pushName || 'Inconnu', messageContent);
+        }
+
         if (!messageContent || !messageContent.startsWith(PREFIX)) return;
 
         // ── ÉTAPE 3 : Identifier l'expéditeur ────────────────────
@@ -144,6 +173,7 @@ async function startBot() {
 
         // ── ÉTAPE 4 : Mode Assistant — seul le owner peut agir ───
         if (assistantMode && !isOwner) {
+            console.log(`[DEBUG] BLOQUÉ — pas owner en mode assistant`);
             return; // Ignorer silencieusement les non-owners
         }
 
@@ -201,11 +231,15 @@ async function startBot() {
             }
 
             // ── ÉTAPE 6 : Préparer le contexte d'exécution ──────
-            // En mode assistant + groupe : rediriger les réponses vers le DM du owner
-            // SAUF pour les commandes de groupe (groupAction: true) qui doivent agir dans le groupe
+            // Mode assistant : rediriger les réponses vers le DM du owner
+            // - Groupes : toujours (sauf groupAction)
+            // - IB avec LID : redirige vers ownerJid standard (@s.whatsapp.net)
             let cmdSock = sock;
-            if (assistantMode && isGroup && ownerJid && !command.groupAction) {
-                cmdSock = createSockProxy(sock, remoteJid, ownerJid);
+            const isLid = remoteJid.endsWith('@lid');
+            if (assistantMode && ownerJid) {
+                if ((isGroup && !command.groupAction) || isLid) {
+                    cmdSock = createSockProxy(sock, remoteJid, ownerJid);
+                }
             }
 
             const modeLabel = assistantMode ? (isGroup ? '[Assistant→IB]' : '[IB]') : '';
