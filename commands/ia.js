@@ -22,8 +22,8 @@ function formatToWhatsApp(text) {
 
 module.exports = {
     name: 'ia',
-    description: "Discute avec la super-puissante JUVE Ai.",
-    aliases: ['ask', 'juve', 'juveai'],
+    description: "Discute avec l'IA intégrée au bot.",
+    aliases: ['ask', 'ai', 'chat'],
     adminOnly: false,
     run: async ({ sock, msg, args, replyWithTag }) => {
         const remoteJid = msg.key.remoteJid;

@@ -19,6 +19,10 @@ auth_info/
 session/
 sessions/
 
+# ---------- YouTube Cookies (CRITICAL — never commit!) ----------
+yt_cookies.txt
+cookies.txt
+
 # ---------- Database ----------
 *.db
 *.sqlite

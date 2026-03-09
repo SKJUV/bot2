@@ -141,7 +141,8 @@ Veuillez réessayer avec une vidéo de moins de ${maxDurationMinutes} minutes.`;
                 extractAudio: true,
                 audioFormat: 'mp3',
                 format: 'bestaudio/best',
-                ffmpegLocation: ffmpegPath
+                ffmpegLocation: ffmpegPath,
+                ...getCookieOptions()
             });
             log(`Téléchargement et conversion terminés.`);
 

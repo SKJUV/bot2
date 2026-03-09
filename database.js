@@ -64,11 +64,45 @@ function setHasUsedPlay(userId) {
 }
 // --- FIN ---
 
-// Les fonctions admin et autres restent inchangées
-async function setUserAdmin(userId, isAdmin) { /* ...votre code... */ }
-async function isUserAdmin(userId) { /* ...votre code... */ }
-function getTotalUsers() { /* ...votre code... */ }
-function getTotalCommands() { /* ...votre code... */ }
+// Les fonctions admin et autres
+async function setUserAdmin(userId, isAdmin) {
+    const userNumber = userId.split('@')[0];
+    return new Promise((resolve, reject) => {
+        db.run("UPDATE users SET isAdmin = ? WHERE id = ?", [isAdmin ? 1 : 0, userNumber], (err) => {
+            if (err) return reject(err);
+            log(`Utilisateur ${userNumber} => admin: ${isAdmin}`);
+            resolve();
+        });
+    });
+}
+
+async function isUserAdmin(userId) {
+    const userNumber = userId.split('@')[0];
+    return new Promise((resolve, reject) => {
+        db.get("SELECT isAdmin FROM users WHERE id = ?", [userNumber], (err, row) => {
+            if (err) return reject(err);
+            resolve(row?.isAdmin === 1);
+        });
+    });
+}
+
+function getTotalUsers() {
+    return new Promise((resolve, reject) => {
+        db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
+            if (err) return reject(err);
+            resolve(row?.count || 0);
+        });
+    });
+}
+
+function getTotalCommands() {
+    return new Promise((resolve, reject) => {
+        db.get("SELECT SUM(commandCount) as total FROM users", (err, row) => {
+            if (err) return reject(err);
+            resolve(row?.total || 0);
+        });
+    });
+}
 
 module.exports = {
     getOrRegisterUser,

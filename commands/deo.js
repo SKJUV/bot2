@@ -5,50 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const log = require('../logger')(module);
 const { path: ffmpegPath } = require('@ffmpeg-installer/ffmpeg');
-
-// --- Votre liste de mots interdits ---
-// --- Liste enrichie de mots interdits ---
-const explicitWords = [
-    // 🔹 Anglais international
-    'porn', 'porno', 'xxx', 'sex', 'sexe', '18+', 'nsfw',
-    'erotic', 'erotique', 'nude', 'boobs', 'tits', 'ass', 'fuck',
-    'dick', 'cock', 'pussy', 'vagina', 'cum', 'sperm', 'orgasm',
-    'masturb', 'handjob', 'blowjob', 'fellatio', 'sodomie', 'anal',
-    'gangbang', 'milf', 'teen porn', 'stepmom', 'stepdad', 'incest',
-    'fetish', 'bdsm', 'bondage', 'hardcore', 'deepthroat', 'strapon',
-    'nipple', 'naked', 'slut', 'whore', 'prostitute', 'hooker',
-    'doggystyle', '69', 'hentai', 'camgirl', 'onlyfans',
-
-    // 🔹 Français
-    'bite', 'queue', 'chatte', 'zizi', 'seins', 'nichons', 'fesses',
-    'branlette', 'branler', 'cul', 'enculer', 'baiser', 'baise',
-    'partouze', 'putain', 'pute', 'salope', 'salaud', 'niquer',
-    'gicler', 'jouir', 'orgasme', 'jouissance', 'levrette',
-    'sucer', 'sodomiser', 'défoncer', 'tripoter', 'caresser',
-    'pénétrer', 'pénétration', 'fellation', 'culotte mouillée','pénétration','masturbation',
-
-    // 🔹 Emojis à connotation explicite
-    '🍆', '🍑', '💦', '🥵', '😏', '🍌', '👉👌',
-
-    // 🔹 Noms de marques / sites / genres très connus
-    'brazzers', 'pornhub', 'xvideos', 'youporn', 'xnxx', 'redtube',
-    'faketaxi', 'blacked', 'tushy', 'vixen', 'naughty america', 
-    'chaturbate', 'fansly', 'rule34', 'r34', 'boule',
-
-    // --- NOUVEAU : Noms d'acteurs/actrices adultes ---
-    'mia khalifa', 'lana rhoades', 'riley reid', 'eva elfie', 'johnny sins',
-    'abella danger', 'angela white', 'sasha grey', 'brandi love', 'asa akira',
-    'jenna jameson', 'leah gotti', 'adriana chechik', 'dani daniels', 'lele pons', // Parfois recherchée dans ce contexte
-    'manuel ferrara', 'rocco siffredi', 'jordi el niño polla',
-
-    // 🔹 Cameroun / Afrique (argot local)
-    'mbombo', 'ndoss', 'kon', 'mbam', 'nkup', 'ngassa', 'pompé', 'nkoun', 'bimser',
-    'tchop mbanga', 'nkap di pussy', 'mbombo show', 'kpaf', 'mimbo-sex', 'chop kon',
-    'tchoko sex', 'grind', 'mimbo for sex', 'bangala', 'zogo sex', 'pétou', 'dozo',
-    'nyamangoro', 'djo sex', 'kok', 'tchop bangala', 'mogo sex',
-];
-
-function isExplicit(text) { return explicitWords.some(word => text.toLowerCase().includes(word)); }
+const { isExplicit } = require('../utils/filter');
+const { getCookieOptions } = require('../utils/cookies');
 
 module.exports = {
     name: 'deo',
@@ -85,7 +43,7 @@ module.exports = {
 
             // --- NOUVELLE LOGIQUE "SMART PRE-CHECK" ---
             await replyWithTag(sock, remoteJid, msg, `💡 Analyse des formats et poids disponibles...`);
-            const metadata = await ytDlpExec(video.url, { dumpSingleJson: true });
+            const metadata = await ytDlpExec(video.url, { dumpSingleJson: true, ...getCookieOptions() });
             
             const qualityTiers = [720, 480, 360];
             let selectedFormat = null;
@@ -122,7 +80,8 @@ module.exports = {
                 await ytDlpExec(video.url, {
                     output: videoPath,
                     format: selectedFormat,
-                    ffmpegLocation: ffmpegPath
+                    ffmpegLocation: ffmpegPath,
+                    ...getCookieOptions()
                 });
                 log(`Téléchargement et fusion terminés.`);
             } else {

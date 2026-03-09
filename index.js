@@ -1,4 +1,4 @@
-// index.js (Version finale avec correction du port)
+// index.js
 require('dotenv').config();
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys'); 
@@ -7,7 +7,11 @@ const pino = require("pino");
 const fs = require("fs");
 const path = require("path");
 const db = require('./database');
+const { initCookies } = require('./utils/cookies');
 const startTime = new Date();
+
+// Initialise les cookies YouTube si disponibles (résout le blocage sur Render/Railway)
+initCookies();
 
 const AUTH_FOLDER = path.join(__dirname, "auth_info");
 const PREFIX = process.env.PREFIX || ".";
@@ -22,12 +26,19 @@ const COMMAND_LIMIT = parseInt(process.env.COMMAND_LIMIT) || 3;
 const BANNED_NUMBERS = (process.env.BANNED_NUMBERS || "").split(",").map(n => n.trim()).filter(Boolean);
 
 const commands = new Map();
+const aliases = new Map();
 for (const file of fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'))) {
     try {
         const command = require(path.join(__dirname, 'commands', file));
         if (command.name) {
             commands.set(command.name, command);
-            console.log(`[CommandLoader] Commande chargée : ${command.name}`);
+            // Enregistrer les aliases
+            if (command.aliases && Array.isArray(command.aliases)) {
+                for (const alias of command.aliases) {
+                    aliases.set(alias, command.name);
+                }
+            }
+            console.log(`[CommandLoader] Commande chargée : ${command.name}${command.aliases ? ` (aliases: ${command.aliases.join(', ')})` : ''}`);
         } else {
             console.warn(`[CommandLoader] Fichier ignoré (pas de nom): ${file}`);
         }
@@ -91,7 +102,7 @@ async function startBot() {
         const commandName = args.shift()?.toLowerCase();
         if (!commandName) return;
 
-        const command = commands.get(commandName);
+        const command = commands.get(commandName) || commands.get(aliases.get(commandName));
         if (!command) return;
 
         try {
