@@ -27,7 +27,7 @@ module.exports = {
         if (!query) return replyWithTag(sock, remoteJid, msg, "Veuillez entrer le nom d'une vidéo.");
         if (isExplicit(query)) return replyWithTag(sock, remoteJid, msg, "Sérieusement ? C'est *ça* que tu cherches ? C'est un peu triste. 🧼 Tiens, un peu de savon. Ça ne te donnera pas une personnalité, mais c'est un début. Recherche refusée.");
 
-        const videoPath = path.join(__dirname, `../temp_video_${Date.now()}.mp4`);
+        const videoPath = path.join('/tmp', `temp_video_${Date.now()}.mp4`);
 
         try {
             await replyWithTag(sock, remoteJid, msg, `🔎 Recherche de "${query}"...`);

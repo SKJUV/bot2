@@ -20,8 +20,8 @@ module.exports = {
 
         // Définition des chemins temporaires au début
         const uniqueId = Date.now();
-        const tempInputPath = path.join(__dirname, `../temp_sticker_input_${uniqueId}`);
-        const tempOutputPath = path.join(__dirname, `../temp_sticker_output_${uniqueId}.webp`);
+        const tempInputPath = path.join('/tmp', `temp_sticker_input_${uniqueId}`);
+        const tempOutputPath = path.join('/tmp', `temp_sticker_output_${uniqueId}.webp`);
 
         try {
             const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;

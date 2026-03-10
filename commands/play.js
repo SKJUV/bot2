@@ -90,7 +90,7 @@ module.exports = {
             return replyWithTag(sock, remoteJid, msg, "❌ Désolé, la recherche de contenu explicite ou inapproprié n'est pas autorisée.");
         }
 
-        const audioPath = path.join(__dirname, `../temp_audio_${Date.now()}.mp3`);
+        const audioPath = path.join('/tmp', `temp_audio_${Date.now()}.mp3`);
 
         try {
             await replyWithTag(sock, remoteJid, msg, `🔎 Recherche de "${query}"...`);

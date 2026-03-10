@@ -1,4 +1,4 @@
-name: Build & Push to GitHub Container Registry
+name: Build, Push & Deploy to Azure
 
 on:
   push:
@@ -55,4 +55,45 @@ jobs:
         run: |
           echo "✅ Image pushed to GitHub Container Registry:"
           echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
+
+  deploy-to-azure:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Instances
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: rg-faouzbot
+          dns-name-label: faouzbot
+          image: ghcr.io/skjuv/bot2:latest
+          name: faouzbot-aci
+          location: francecentral
+          os-type: Linux
+          cpu: 1
+          memory: 1.5
+          ports: "3000"
+          restart-policy: Always
+          azure-file-volume-account-name: safaouzbot
+          azure-file-volume-account-key: ${{ secrets.AZURE_STORAGE_KEY }}
+          azure-file-volume-share-name: botauth
+          azure-file-volume-mount-path: /usr/src/app/auth_info
+          environment-variables: |
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            OWNER_NUMBERS=${{ secrets.OWNER_NUMBERS }}
+            PREFIX=.
+            BOT_NAME=faouzbot
+            ASSISTANT_MODE=true
+            UNLIMITED_MODE=true
+            SYNC_FULL_HISTORY=false
+            PROCESS_OLD_MESSAGES=false
+            AUTO_VIEWONCE=true
+            CREATOR_NAME=SKJUV
+            GITHUB_LINK=https://github.com/SKJUV
+            COOLDOWN_MS=3000
+            COMMAND_LIMIT=3
+            PORT=3000

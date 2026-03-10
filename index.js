@@ -17,6 +17,13 @@ const startTime = new Date();
 // Initialise les cookies YouTube si disponibles
 initCookies();
 
+// Nettoyage des fichiers temporaires orphelins au démarrage
+const tmpFiles = require('fs').readdirSync('/tmp').filter(f => f.startsWith('temp_'));
+if (tmpFiles.length > 0) {
+    tmpFiles.forEach(f => { try { fs.unlinkSync(path.join('/tmp', f)); } catch {} });
+    console.log(`[CLEANUP] ${tmpFiles.length} fichier(s) temporaire(s) orphelin(s) supprimé(s).`);
+}
+
 const AUTH_FOLDER = path.join(__dirname, "auth_info");
 const PREFIX = process.env.PREFIX || ".";
 const BOT_NAME = process.env.BOT_NAME || "WhatsBot";
