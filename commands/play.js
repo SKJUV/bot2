@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const log = require('../logger')(module);
 const { path: ffmpegPath } = require('@ffmpeg-installer/ffmpeg');
+const { getCookieOptions } = require('../utils/cookies');
 
 // --- Liste enrichie de mots interdits ---
 // --- Liste enrichie de mots interdits ---
@@ -25,14 +26,14 @@ const explicitWords = [
     'partouze', 'putain', 'pute', 'salope', 'salaud', 'niquer',
     'gicler', 'jouir', 'orgasme', 'jouissance', 'levrette',
     'sucer', 'sodomiser', 'défoncer', 'tripoter', 'caresser',
-    'pénétrer', 'pénétration', 'fellation', 'culotte mouillée','pénétration','masturbation',
+    'pénétrer', 'pénétration', 'fellation', 'culotte mouillée', 'pénétration', 'masturbation',
 
     // --- NOUVEAU : Emojis à connotation explicite ---
     '🍆', '🍑', '💦', '🥵', '😏', '🍌', '👉👌',
 
     // --- NOUVEAU : Noms de marques / sites / genres très connus ---
     'brazzers', 'pornhub', 'xvideos', 'youporn', 'xnxx', 'redtube',
-    'faketaxi', 'blacked', 'tushy', 'vixen', 'naughty america', 
+    'faketaxi', 'blacked', 'tushy', 'vixen', 'naughty america',
     'chaturbate', 'fansly', 'rule34', 'r34', 'boule',
 
     // 🔹 Cameroun / Afrique (argot local)
@@ -90,7 +91,7 @@ module.exports = {
             return replyWithTag(sock, remoteJid, msg, "❌ Désolé, la recherche de contenu explicite ou inapproprié n'est pas autorisée.");
         }
 
-        const audioPath = path.join('/tmp', `temp_audio_${Date.now()}.mp3`);
+        const audioPath = path.join(process.env.TEMP_DIR || '/tmp', `temp_audio_${Date.now()}.mp3`);
 
         try {
             await replyWithTag(sock, remoteJid, msg, `🔎 Recherche de "${query}"...`);
@@ -143,6 +144,7 @@ Veuillez réessayer avec une vidéo de moins de ${maxDurationMinutes} minutes.`;
                 audioFormat: 'mp3',
                 format: 'bestaudio/best',
                 ffmpegLocation: ffmpegPath,
+                remoteComponents: 'ejs:github',
                 ...getCookieOptions()
             });
             log(`Téléchargement et conversion terminés.`);

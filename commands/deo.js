@@ -27,7 +27,7 @@ module.exports = {
         if (!query) return replyWithTag(sock, remoteJid, msg, "Veuillez entrer le nom d'une vidéo.");
         if (isExplicit(query)) return replyWithTag(sock, remoteJid, msg, "Sérieusement ? C'est *ça* que tu cherches ? C'est un peu triste. 🧼 Tiens, un peu de savon. Ça ne te donnera pas une personnalité, mais c'est un début. Recherche refusée.");
 
-        const videoPath = path.join('/tmp', `temp_video_${Date.now()}.mp4`);
+        const videoPath = path.join(process.env.TEMP_DIR || '/tmp', `temp_video_${Date.now()}.mp4`);
 
         try {
             await replyWithTag(sock, remoteJid, msg, `🔎 Recherche de "${query}"...`);
@@ -44,44 +44,67 @@ module.exports = {
 
             // --- NOUVELLE LOGIQUE "SMART PRE-CHECK" ---
             await replyWithTag(sock, remoteJid, msg, `💡 Analyse des formats et poids disponibles...`);
-            const metadata = await ytDlpExec(video.url, { dumpSingleJson: true, ...getCookieOptions() });
-            
+            const metadata = await ytDlpExec(video.url, { dumpSingleJson: true, remoteComponents: 'ejs:github', ...getCookieOptions() });
+
             const qualityTiers = [720, 480, 360];
             let selectedFormat = null;
             let finalSizeMb = 0;
 
-            // Trouver le meilleur format audio séparé
-            const bestAudio = metadata.formats.filter(f => f.acodec !== 'none' && f.vcodec === 'none').sort((a, b) => b.filesize_approx - a.filesize_approx)[0];
-            if (!bestAudio) throw new Error("Aucune piste audio séparée trouvée.");
+            // Trouver le meilleur format audio séparé (s'il existe)
+            const bestAudio = metadata.formats.filter(f => f.acodec !== 'none' && f.vcodec === 'none').sort((a, b) => (b.filesize_approx || b.filesize || 0) - (a.filesize_approx || a.filesize || 0))[0];
 
             for (const quality of qualityTiers) {
                 log(`Analyse pour la qualité ${quality}p...`);
-                // Trouver le meilleur format vidéo (sans audio) pour cette qualité
-                const bestVideo = metadata.formats.filter(f => f.vcodec !== 'none' && f.acodec === 'none' && f.height <= quality).sort((a, b) => b.height - a.height)[0];
+                let estimatedSize = 0;
 
-                if (bestVideo) {
-                    const estimatedSize = (bestVideo.filesize_approx || 0) + (bestAudio.filesize_approx || 0);
-                    finalSizeMb = (estimatedSize / (1024 * 1024)).toFixed(2);
-                    
-                    if (estimatedSize <= maxSizeBytes) {
-                        log(`Format valide trouvé: ${quality}p. Poids estimé: ${finalSizeMb} Mo`);
-                        selectedFormat = `${bestVideo.format_id}+${bestAudio.format_id}`;
-                        break; // On a trouvé, on arrête de chercher
+                // 1. Chercher un format combiné (vidéo + audio)
+                const combinedFormat = metadata.formats.filter(f => f.vcodec !== 'none' && f.acodec !== 'none' && f.height <= quality).sort((a, b) => b.height - a.height)[0];
+
+                // 2. Chercher un format vidéo seul (si audio séparé dispo)
+                const videoOnlyFormat = bestAudio ? metadata.formats.filter(f => f.vcodec !== 'none' && f.acodec === 'none' && f.height <= quality).sort((a, b) => b.height - a.height)[0] : null;
+
+                if (combinedFormat) {
+                    estimatedSize = combinedFormat.filesize_approx || combinedFormat.filesize || 0;
+                    selectedFormat = combinedFormat.format_id;
+                } else if (videoOnlyFormat && bestAudio) {
+                    estimatedSize = (videoOnlyFormat.filesize_approx || videoOnlyFormat.filesize || 0) + (bestAudio.filesize_approx || bestAudio.filesize || 0);
+                    selectedFormat = `${videoOnlyFormat.format_id}+${bestAudio.format_id}`;
+                }
+
+                if (selectedFormat) {
+                    if (estimatedSize > 0) {
+                        finalSizeMb = (estimatedSize / (1024 * 1024)).toFixed(2);
+                        if (estimatedSize <= maxSizeBytes) {
+                            log(`Format valide trouvé: ${quality}p. Poids estimé: ${finalSizeMb} Mo`);
+                            break;
+                        } else {
+                            log(`Format ${quality}p trop lourd. Poids estimé: ${finalSizeMb} Mo`);
+                            selectedFormat = null; // On annule et on passe à la qualité inférieure
+                        }
                     } else {
-                        log(`Format ${quality}p trop lourd. Poids estimé: ${finalSizeMb} Mo`);
+                        finalSizeMb = "Inconnu";
+                        log(`Format valide trouvé: ${quality}p (Poids inconnu).`);
+                        break;
                     }
                 }
+            }
+
+            if (!selectedFormat) {
+                log("Aucun précis format n'a validé les critères, tentative de fallback...");
+                selectedFormat = "best[height<=720]";
+                finalSizeMb = "Inconnu";
             }
 
             // --- TÉLÉCHARGEMENT ---
             if (selectedFormat) {
                 await replyWithTag(sock, remoteJid, msg, `✅ Qualité *${selectedFormat.split('+')[0]} (${finalSizeMb} Mo)* sélectionnée. Téléchargement...`);
                 log(`Lancement du téléchargement avec le format optimisé: ${selectedFormat}`);
-                
+
                 await ytDlpExec(video.url, {
                     output: videoPath,
                     format: selectedFormat,
                     ffmpegLocation: ffmpegPath,
+                    remoteComponents: 'ejs:github',
                     ...getCookieOptions()
                 });
                 log(`Téléchargement et fusion terminés.`);

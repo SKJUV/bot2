@@ -32,7 +32,7 @@ module.exports = {
             for (let i = 0; i < buffers.length; i++) {
                 const b = buffers[i];
                 let groupName = b.groupJid;
-                try { groupName = (await sock.groupMetadata(b.groupJid)).subject; } catch {}
+                try { groupName = (await sock.groupMetadata(b.groupJid)).subject; } catch { }
                 const agoMin = Math.floor((Date.now() - b.lastMessage) / 60000);
                 lines.push(`│  *${i + 1}.* ${groupName}`);
                 lines.push(`│     📨 ${b.count} messages • 🕐 il y a ${agoMin} min`);
@@ -70,10 +70,10 @@ module.exports = {
             for (let i = 0; i < buffers.length; i++) {
                 const b = buffers[i];
                 let groupName = b.groupJid;
-                try { groupName = (await sock.groupMetadata(b.groupJid)).subject; } catch {}
+                try { groupName = (await sock.groupMetadata(b.groupJid)).subject; } catch { }
                 const { messages } = getMessages(b.groupJid, maxAge);
                 if (messages.length < 3) continue;
-                
+
                 const summary = await generateSummary(messages, groupName);
                 await replyWithTag(sock, remoteJid, msg, summary);
                 // Délai pour éviter le rate limit
@@ -93,7 +93,7 @@ module.exports = {
 
         const target = buffers[groupIndex];
         let groupName = target.groupJid;
-        try { groupName = (await sock.groupMetadata(target.groupJid)).subject; } catch {}
+        try { groupName = (await sock.groupMetadata(target.groupJid)).subject; } catch { }
 
         const { messages } = getMessages(target.groupJid, maxAge);
         if (messages.length < 3) {
@@ -129,7 +129,7 @@ ${conversation}
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         const result = await model.generateContent(prompt);
         const text = result.response.text();
 

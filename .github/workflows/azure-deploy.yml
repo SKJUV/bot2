@@ -94,6 +94,8 @@ jobs:
             AUTO_VIEWONCE=true
             CREATOR_NAME=SKJUV
             GITHUB_LINK=https://github.com/SKJUV
+            LINKEDIN_LINK=https://www.linkedin.com/in/faouz-skjuve
             COOLDOWN_MS=3000
             COMMAND_LIMIT=3
             PORT=3000
+            TEMP_DIR=/tmp

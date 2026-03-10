@@ -11,8 +11,11 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python-is-python3 \
-    && pip3 install --break-system-packages yt-dlp \
+    && pip3 install --break-system-packages --upgrade yt-dlp \
     && rm -rf /var/lib/apt/lists/*
+
+# Pre-download remote components for yt-dlp (JS challenge solver)
+RUN yt-dlp --remote-components ejs:github --dump-json "https://www.youtube.com/watch?v=kaOIxll4LCA" > /dev/null 2>&1 || true
 
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json ./

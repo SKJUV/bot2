@@ -1,7 +1,7 @@
 // index.js
 require('dotenv').config();
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys'); 
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const qrcode = require("qrcode-terminal");
 const pino = require("pino");
 const fs = require("fs");
@@ -18,10 +18,16 @@ const startTime = new Date();
 initCookies();
 
 // Nettoyage des fichiers temporaires orphelins au démarrage
-const tmpFiles = require('fs').readdirSync('/tmp').filter(f => f.startsWith('temp_'));
-if (tmpFiles.length > 0) {
-    tmpFiles.forEach(f => { try { fs.unlinkSync(path.join('/tmp', f)); } catch {} });
-    console.log(`[CLEANUP] ${tmpFiles.length} fichier(s) temporaire(s) orphelin(s) supprimé(s).`);
+const TEMP_DIR = process.env.TEMP_DIR || '/tmp';
+try {
+    if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+    const tmpFiles = fs.readdirSync(TEMP_DIR).filter(f => f.startsWith('temp_'));
+    if (tmpFiles.length > 0) {
+        tmpFiles.forEach(f => { try { fs.unlinkSync(path.join(TEMP_DIR, f)); } catch { } });
+        console.log(`[CLEANUP] ${tmpFiles.length} fichier(s) temporaire(s) orphelin(s) supprimé(s).`);
+    }
+} catch (err) {
+    console.warn(`[CLEANUP] Impossible de nettoyer ${TEMP_DIR}:`, err.message);
 }
 
 const AUTH_FOLDER = path.join(__dirname, "auth_info");
@@ -59,7 +65,7 @@ function replyWithTag(sock, jid, quoted, text) {
 
 async function startBot() {
     console.log("Démarrage du bot WhatsApp...");
-    
+
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log(`Using Baileys v${version.join(".")}, isLatest: ${isLatest}`);
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
@@ -68,6 +74,8 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: "warn" }),
+        // Ne pas marquer le compte comme "en ligne" en permanence
+        markOnline: false,
         // Ne pas synchroniser l'historique complet (réduit le spam de messages anciens)
         syncFullHistory: process.env.SYNC_FULL_HISTORY === 'true',
     });
@@ -133,7 +141,7 @@ async function startBot() {
                 if (!OWNER_NUMBERS.includes(voSender) && ownerJid) {
                     let groupName = 'Chat privé';
                     if (isGroup) {
-                        try { groupName = (await sock.groupMetadata(remoteJid)).subject; } catch {}
+                        try { groupName = (await sock.groupMetadata(remoteJid)).subject; } catch { }
                     }
                     const senderName = msg.pushName || 'Inconnu';
                     const voId = storeViewOnce(msg, voInfo, groupName, senderName);
@@ -149,7 +157,7 @@ async function startBot() {
                         `💡 Tape \`${PREFIX}vo ${voId}\` pour l'extraire en IB.`,
                         `📋 Tape \`${PREFIX}vo list\` pour voir toutes les vues uniques.`,
                     ].join('\n');
-                    await sock.sendMessage(ownerJid, { text: `${BOT_TAG}\n\n${notif}` }).catch(() => {});
+                    await sock.sendMessage(ownerJid, { text: `${BOT_TAG}\n\n${notif}` }).catch(() => { });
                 }
                 return; // Les vues uniques n'ont pas de texte, pas la peine de continuer
             }
@@ -254,14 +262,14 @@ async function startBot() {
 
             // Réaction ⏳ : en mode assistant + groupe, on reste discret (pas de réaction visible)
             if (!(assistantMode && isGroup)) {
-                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } }).catch(() => {});
+                await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } }).catch(() => { });
             }
 
             await command.run({ sock: cmdSock, msg, args, replyWithTag, commands, aliases, db, startTime, senderNumber, senderId });
 
             // Réaction ✅
             if (!(assistantMode && isGroup)) {
-                await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } }).catch(() => {});
+                await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } }).catch(() => { });
             }
 
             // Compteurs (mode public uniquement)
@@ -274,14 +282,14 @@ async function startBot() {
             console.error(`[ERREUR] Commande "${commandName}":`, err.message, err.stack);
 
             if (!(assistantMode && isGroup)) {
-                await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } }).catch(() => {});
+                await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } }).catch(() => { });
             }
 
             // En mode assistant, envoyer l'erreur en IB
             const errorJid = (assistantMode && ownerJid) ? ownerJid : remoteJid;
             try {
                 await replyWithTag(sock, errorJid, msg, `❌ Erreur dans la commande *${commandName}* :\n\`\`\`\n${err.message}\n\`\`\``);
-            } catch {}
+            } catch { }
         }
     });
 }
