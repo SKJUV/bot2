@@ -20,8 +20,7 @@ faouzbotacr11360
 
 ### Secret 3 : ACR_PASSWORD
 ```
-BnGaLmJulNdXK8lxGfk3fD0KIukHYJHiVFWRm9LMMiAwPs5JIomFJQQJ99CCAC5T7U2Eqg7NAAACAZCRF
-Z3D
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ## Vérification
