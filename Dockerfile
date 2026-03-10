@@ -5,10 +5,11 @@ FROM node:20-slim
 WORKDIR /usr/src/app
 
 # Installe les dépendances système nécessaires
-# python3 : requis par certains modules npm (node-gyp)
-# yt-dlp  : téléchargeur YouTube (commandes play/deo)
+# python3/pip : requis par certains modules npm + installation de yt-dlp
+# yt-dlp      : téléchargeur YouTube (commandes play/deo)
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-pip \
     python-is-python3 \
     && pip3 install --break-system-packages yt-dlp \
     && rm -rf /var/lib/apt/lists/*
