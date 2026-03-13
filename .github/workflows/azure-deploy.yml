@@ -1,4 +1,4 @@
-name: Build, Push & Deploy to Azure
+name: Build and Push Docker Image
 
 on:
   push:
@@ -7,7 +7,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository }} # This will inherently be skjuv/bot2 if repo name remains, but let's change it. Actually, IMAGE_NAME should just be whatsapp-bot. Let's force it.
+  # But since github.repository includes owner context, let's use:
+  IMAGE_TAG_NAME: ${{ github.repository_owner }}/whatsapp-bot
 
 jobs:
   build-and-push:
@@ -36,7 +38,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_TAG_NAME }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=
@@ -54,48 +56,4 @@ jobs:
       - name: Image pushed successfully
         run: |
           echo "✅ Image pushed to GitHub Container Registry:"
-          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-
-  deploy-to-azure:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Deploy to Azure Container Instances
-        uses: azure/aci-deploy@v1
-        with:
-          resource-group: rg-faouzbot
-          dns-name-label: faouzbot
-          image: ghcr.io/skjuv/bot2:latest
-          name: faouzbot-aci
-          location: francecentral
-          os-type: Linux
-          cpu: 1
-          memory: 1.5
-          ports: "3000"
-          restart-policy: Always
-          azure-file-volume-account-name: safaouzbot
-          azure-file-volume-account-key: ${{ secrets.AZURE_STORAGE_KEY }}
-          azure-file-volume-share-name: botauth
-          azure-file-volume-mount-path: /usr/src/app/auth_info
-          environment-variables: |
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            OWNER_NUMBERS=${{ secrets.OWNER_NUMBERS }}
-            PREFIX=.
-            BOT_NAME=faouzbot
-            ASSISTANT_MODE=true
-            UNLIMITED_MODE=true
-            SYNC_FULL_HISTORY=false
-            PROCESS_OLD_MESSAGES=false
-            AUTO_VIEWONCE=true
-            CREATOR_NAME=SKJUV
-            GITHUB_LINK=https://github.com/SKJUV
-            LINKEDIN_LINK=https://www.linkedin.com/in/faouz-skjuve
-            COOLDOWN_MS=3000
-            COMMAND_LIMIT=3
-            PORT=3000
-            TEMP_DIR=/tmp
+          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_TAG_NAME }}:latest"

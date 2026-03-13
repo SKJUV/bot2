@@ -1,6 +1,7 @@
 // index.js
 require('dotenv').config();
 const express = require('express');
+const axios = require('axios');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const qrcode = require("qrcode-terminal");
 const pino = require("pino");
@@ -13,6 +14,23 @@ const botConfig = require('./utils/config');
 const { getOwnerJid, detectViewOnce, storeViewOnce, createSockProxy } = require('./utils/assistant');
 const { pushMessage } = require('./utils/groupBuffer');
 const startTime = new Date();
+
+// --- SaaS Webhook Manager ---
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const INSTANCE_ID = process.env.INSTANCE_ID;
+
+async function sendWebhook(event, data) {
+    if (!WEBHOOK_URL || !INSTANCE_ID) return;
+    try {
+        await axios.post(WEBHOOK_URL, {
+            instanceId: INSTANCE_ID,
+            event: event,
+            data: data
+        });
+    } catch (err) {
+        console.error(`[Webhook Error] Echec de l'envoi de l'event ${event}`);
+    }
+}
 
 // Initialise les cookies YouTube si disponibles
 initCookies();
@@ -91,15 +109,18 @@ async function startBot() {
             qrcode.generate(qr, { small: true });
             console.log("[QR Code] Scannez ce code avec WhatsApp.");
             console.log("------------------------------------------------");
+            sendWebhook('qr', { qr });
         }
         if (connection === "close") {
             botReady = false;
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("Connexion fermée:", lastDisconnect.error, ", reconnexion:", shouldReconnect);
+            sendWebhook('status', { status: 'disconnected', reason: shouldReconnect ? 'reconnecting' : 'loggedOut' });
             if (shouldReconnect) startBot();
         } else if (connection === "open") {
             const mode = botConfig.get('assistantMode') ? '🔒 Assistant' : '🌐 Public';
             console.log(`✅ Bot WhatsApp connecté ! Mode : ${mode}`);
+            sendWebhook('status', { status: 'connected' });
             if (PROCESS_OLD) {
                 botReady = true;
                 console.log('[SYNC] Traitement des anciens messages activé.');
