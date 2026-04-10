@@ -202,6 +202,11 @@ Toute la configuration se fait via le fichier `.env`. Voici les variables dispon
 | `COMMAND_LIMIT` | Nombre de commandes gratuites (si `UNLIMITED_MODE=false`) | `3` |
 | `GROUP_WELCOME_MESSAGE` | Message envoyé quand un membre est ajouté | Message par défaut |
 | `AI_SYSTEM_PROMPT` | Personnalité/instructions de l'IA | Prompt par défaut |
+| `AUTH_DIR` | Dossier de session Baileys (isolation multi-instance) | `auth_info` |
+| `PAIRING_MODE` | `true` = code de jumelage, `false` = QR code | `false` |
+| `PHONE_NUMBER` | Numéro pour `requestPairingCode` (chiffres uniquement) | — |
+| `WEBHOOK_URL` | URL de webhook pour remonter `status/qr/pairing_code` | — |
+| `INSTANCE_ID` | Identifiant d'instance renvoyé au webhook | — |
 
 ---
 
@@ -217,6 +222,29 @@ docker run -d --name whatsbot \
   -v $(pwd)/auth_info:/usr/src/app/auth_info \
   whatsbot
 ```
+
+### Mode SaaS (Pairing Code, multi-instance)
+
+Pour une plateforme multi-utilisateurs, démarrez chaque instance avec un dossier d'auth dédié :
+
+```bash
+docker run -d --name bot-user-1234 \
+  -p 3000:3000 \
+  -e AUTH_DIR=/usr/src/app/auth_info/user_1234 \
+  -e PAIRING_MODE=true \
+  -e PHONE_NUMBER=2250102030405 \
+  -e WEBHOOK_URL=https://api.example.com/webhooks/whatsapp \
+  -e INSTANCE_ID=bot-user-1234 \
+  --env-file .env \
+  -v $(pwd)/auth_info:/usr/src/app/auth_info \
+  whatsbot
+```
+
+Le bot émet alors les événements webhook suivants :
+- `status` (connected/disconnected)
+- `pairing_code` (code de jumelage prêt à afficher dans l'interface web)
+- `pairing_error` (échec de génération du code)
+- `qr` (uniquement si `PAIRING_MODE=false`)
 
 ### Avec Docker Compose
 

@@ -102,3 +102,6 @@ desktop.ini
 .node_repl_history
 *.tgz
 .yarn-integrity
+setup_azure_sp.py
+/platform-manager
+/platform-portal

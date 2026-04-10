@@ -48,7 +48,7 @@ try {
     console.warn(`[CLEANUP] Impossible de nettoyer ${TEMP_DIR}:`, err.message);
 }
 
-const AUTH_FOLDER = path.join(__dirname, "auth_info");
+const AUTH_FOLDER = process.env.AUTH_DIR || path.join(__dirname, "auth_info");
 const PREFIX = process.env.PREFIX || ".";
 const BOT_NAME = process.env.BOT_NAME || "WhatsBot";
 const BOT_TAG = `*${BOT_NAME}* 👨🏻‍💻`;
@@ -56,6 +56,8 @@ const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "").split(",").map(n => n.tr
 const UNLIMITED_MODE = process.env.UNLIMITED_MODE !== "false";
 const COMMAND_LIMIT = parseInt(process.env.COMMAND_LIMIT) || 3;
 const BANNED_NUMBERS = (process.env.BANNED_NUMBERS || "").split(",").map(n => n.trim()).filter(Boolean);
+const PAIRING_MODE = process.env.PAIRING_MODE === 'true';
+const PAIRING_PHONE = (process.env.PHONE_NUMBER || '').replace(/\D/g, '');
 
 // --- Chargement des commandes ---
 const commands = new Map();
@@ -92,11 +94,36 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: "warn" }),
+        printQRInTerminal: !PAIRING_MODE,
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
         // Ne pas marquer le compte comme "en ligne" en permanence
         markOnline: false,
         // Ne pas synchroniser l'historique complet (réduit le spam de messages anciens)
         syncFullHistory: process.env.SYNC_FULL_HISTORY === 'true',
     });
+
+    let pairingCodeRequested = false;
+    if (PAIRING_MODE && !state.creds.registered) {
+        if (!PAIRING_PHONE) {
+            console.warn('[PAIRING] PHONE_NUMBER manquant. Impossible de demander un code de jumelage.');
+        } else {
+            setTimeout(async () => {
+                if (pairingCodeRequested) return;
+                try {
+                    pairingCodeRequested = true;
+                    const code = await sock.requestPairingCode(PAIRING_PHONE);
+                    console.log('------------------------------------------------');
+                    console.log(`[Pairing Code] Entrez ce code dans WhatsApp: ${code}`);
+                    console.log('------------------------------------------------');
+                    await sendWebhook('pairing_code', { code, phone: PAIRING_PHONE });
+                } catch (err) {
+                    pairingCodeRequested = false;
+                    console.error('[PAIRING] Echec requestPairingCode:', err.message);
+                    await sendWebhook('pairing_error', { message: err.message });
+                }
+            }, 3000);
+        }
+    }
 
     // --- Flag pour ignorer les anciens messages ---
     let botReady = false;
@@ -104,7 +131,7 @@ async function startBot() {
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
-        if (qr) {
+        if (qr && !PAIRING_MODE) {
             console.log("------------------------------------------------");
             qrcode.generate(qr, { small: true });
             console.log("[QR Code] Scannez ce code avec WhatsApp.");
