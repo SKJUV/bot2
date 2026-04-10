@@ -15,6 +15,9 @@ const { getOwnerJid, detectViewOnce, storeViewOnce, createSockProxy } = require(
 const { pushMessage } = require('./utils/groupBuffer');
 const startTime = new Date();
 let reconnectAttempt = 0;
+let pairingRetryTimer = null;
+let pairingAttempt = 0;
+let activePairingSession = 0;
 
 // --- SaaS Webhook Manager ---
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
@@ -59,6 +62,8 @@ const COMMAND_LIMIT = parseInt(process.env.COMMAND_LIMIT) || 3;
 const BANNED_NUMBERS = (process.env.BANNED_NUMBERS || "").split(",").map(n => n.trim()).filter(Boolean);
 const PAIRING_MODE = process.env.PAIRING_MODE === 'true';
 const PAIRING_PHONE = (process.env.PHONE_NUMBER || '').replace(/\D/g, '');
+const PAIRING_RETRY_MS = parseInt(process.env.PAIRING_RETRY_MS || '120000', 10);
+const PAIRING_MAX_ATTEMPTS = parseInt(process.env.PAIRING_MAX_ATTEMPTS || '5', 10);
 
 // --- Chargement des commandes ---
 const commands = new Map();
@@ -84,8 +89,32 @@ function replyWithTag(sock, jid, quoted, text) {
     return sock.sendMessage(jid, { text: `${BOT_TAG}\n\n${text}` }, { quoted });
 }
 
+function clearPairingRetryTimer() {
+    if (pairingRetryTimer) {
+        clearTimeout(pairingRetryTimer);
+        pairingRetryTimer = null;
+    }
+}
+
+function schedulePairingRetry(sessionId, retryFn, reason = 'retry') {
+    if (!PAIRING_MODE || !PAIRING_PHONE) return;
+    if (pairingAttempt >= PAIRING_MAX_ATTEMPTS) {
+        console.warn(`[PAIRING] Nombre maximal de tentatives atteint (${PAIRING_MAX_ATTEMPTS}).`);
+        return;
+    }
+    clearPairingRetryTimer();
+    pairingRetryTimer = setTimeout(() => {
+        if (sessionId !== activePairingSession) return;
+        retryFn(reason);
+    }, PAIRING_RETRY_MS);
+}
+
 async function startBot() {
     console.log("Démarrage du bot WhatsApp...");
+
+    activePairingSession += 1;
+    const sessionId = activePairingSession;
+    clearPairingRetryTimer();
 
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log(`Using Baileys v${version.join(".")}, isLatest: ${isLatest}`);
@@ -102,27 +131,45 @@ async function startBot() {
         syncFullHistory: process.env.SYNC_FULL_HISTORY === 'true',
     });
 
-    let pairingCodeRequested = false;
-    if (PAIRING_MODE && !state.creds.registered) {
+    const requestPairing = async (reason = 'initial') => {
+        if (sessionId !== activePairingSession) return;
+        if (!PAIRING_MODE || state.creds.registered) return;
         if (!PAIRING_PHONE) {
             console.warn('[PAIRING] PHONE_NUMBER manquant. Impossible de demander un code de jumelage.');
-        } else {
-            setTimeout(async () => {
-                if (pairingCodeRequested) return;
-                try {
-                    pairingCodeRequested = true;
-                    const code = await sock.requestPairingCode(PAIRING_PHONE);
-                    console.log('------------------------------------------------');
-                    console.log(`[Pairing Code] Entrez ce code dans WhatsApp: ${code}`);
-                    console.log('------------------------------------------------');
-                    await sendWebhook('pairing_code', { code, phone: PAIRING_PHONE });
-                } catch (err) {
-                    pairingCodeRequested = false;
-                    console.error('[PAIRING] Echec requestPairingCode:', err.message);
-                    await sendWebhook('pairing_error', { message: err.message });
-                }
-            }, 3000);
+            return;
         }
+
+        pairingAttempt += 1;
+        try {
+            const code = await sock.requestPairingCode(PAIRING_PHONE);
+            console.log('------------------------------------------------');
+            console.log(`[Pairing Code] Entrez ce code dans WhatsApp: ${code}`);
+            console.log('------------------------------------------------');
+            await sendWebhook('pairing_code', {
+                code,
+                phone: PAIRING_PHONE,
+                attempt: pairingAttempt,
+                reason
+            });
+
+            // Si le compte n'est toujours pas lié, on redemande un nouveau code après expiration probable.
+            schedulePairingRetry(sessionId, requestPairing, 'expired-or-not-linked');
+        } catch (err) {
+            console.error('[PAIRING] Echec requestPairingCode:', err.message);
+            await sendWebhook('pairing_error', {
+                message: err.message,
+                attempt: pairingAttempt,
+                reason
+            });
+            schedulePairingRetry(sessionId, requestPairing, 'retry-after-error');
+        }
+    };
+
+    if (PAIRING_MODE && !state.creds.registered) {
+        pairingAttempt = 0;
+        setTimeout(() => {
+            requestPairing('initial');
+        }, 3000);
     }
 
     // --- Flag pour ignorer les anciens messages ---
@@ -140,6 +187,7 @@ async function startBot() {
         }
         if (connection === "close") {
             botReady = false;
+            clearPairingRetryTimer();
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("Connexion fermée:", lastDisconnect.error, ", reconnexion:", shouldReconnect);
             sendWebhook('status', { status: 'disconnected', reason: shouldReconnect ? 'reconnecting' : 'loggedOut' });
@@ -152,7 +200,9 @@ async function startBot() {
             }
             reconnectAttempt = 0;
         } else if (connection === "open") {
+            clearPairingRetryTimer();
             reconnectAttempt = 0;
+            pairingAttempt = 0;
             const mode = botConfig.get('assistantMode') ? '🔒 Assistant' : '🌐 Public';
             console.log(`✅ Bot WhatsApp connecté ! Mode : ${mode}`);
             sendWebhook('status', { status: 'connected' });
