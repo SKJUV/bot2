@@ -14,6 +14,7 @@ const botConfig = require('./utils/config');
 const { getOwnerJid, detectViewOnce, storeViewOnce, createSockProxy } = require('./utils/assistant');
 const { pushMessage } = require('./utils/groupBuffer');
 const startTime = new Date();
+let reconnectAttempt = 0;
 
 // --- SaaS Webhook Manager ---
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
@@ -94,7 +95,6 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: "warn" }),
-        printQRInTerminal: !PAIRING_MODE,
         browser: ["Ubuntu", "Chrome", "20.0.04"],
         // Ne pas marquer le compte comme "en ligne" en permanence
         markOnline: false,
@@ -143,8 +143,16 @@ async function startBot() {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("Connexion fermée:", lastDisconnect.error, ", reconnexion:", shouldReconnect);
             sendWebhook('status', { status: 'disconnected', reason: shouldReconnect ? 'reconnecting' : 'loggedOut' });
-            if (shouldReconnect) startBot();
+            if (shouldReconnect) {
+                reconnectAttempt += 1;
+                const delayMs = Math.min(30000, 2000 * reconnectAttempt);
+                console.log(`[RECONNECT] Nouvelle tentative dans ${Math.round(delayMs / 1000)}s...`);
+                setTimeout(() => startBot(), delayMs);
+                return;
+            }
+            reconnectAttempt = 0;
         } else if (connection === "open") {
+            reconnectAttempt = 0;
             const mode = botConfig.get('assistantMode') ? '🔒 Assistant' : '🌐 Public';
             console.log(`✅ Bot WhatsApp connecté ! Mode : ${mode}`);
             sendWebhook('status', { status: 'connected' });
