@@ -18,6 +18,7 @@ let reconnectAttempt = 0;
 let pairingRetryTimer = null;
 let pairingAttempt = 0;
 let activePairingSession = 0;
+let lastPairingRequestedAt = 0;
 
 // --- SaaS Webhook Manager ---
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
@@ -64,6 +65,7 @@ const PAIRING_MODE = process.env.PAIRING_MODE === 'true';
 const PAIRING_PHONE = (process.env.PHONE_NUMBER || '').replace(/\D/g, '');
 const PAIRING_RETRY_MS = parseInt(process.env.PAIRING_RETRY_MS || '120000', 10);
 const PAIRING_MAX_ATTEMPTS = parseInt(process.env.PAIRING_MAX_ATTEMPTS || '5', 10);
+const PAIRING_MIN_INTERVAL_MS = parseInt(process.env.PAIRING_MIN_INTERVAL_MS || '90000', 10);
 
 // --- Chargement des commandes ---
 const commands = new Map();
@@ -139,9 +141,19 @@ async function startBot() {
             return;
         }
 
+        const now = Date.now();
+        const elapsed = now - lastPairingRequestedAt;
+        if (elapsed < PAIRING_MIN_INTERVAL_MS) {
+            const waitMs = PAIRING_MIN_INTERVAL_MS - elapsed;
+            schedulePairingRetry(sessionId, requestPairing, 'throttled-too-soon');
+            console.log(`[PAIRING] Demande ignorée (${reason}), prochain essai dans ~${Math.ceil(waitMs / 1000)}s.`);
+            return;
+        }
+
         pairingAttempt += 1;
         try {
             const code = await sock.requestPairingCode(PAIRING_PHONE);
+            lastPairingRequestedAt = Date.now();
             console.log('------------------------------------------------');
             console.log(`[Pairing Code] Entrez ce code dans WhatsApp: ${code}`);
             console.log('------------------------------------------------');
@@ -166,7 +178,6 @@ async function startBot() {
     };
 
     if (PAIRING_MODE && !state.creds.registered) {
-        pairingAttempt = 0;
         setTimeout(() => {
             requestPairing('initial');
         }, 3000);
