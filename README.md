@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Baileys](https://img.shields.io/badge/Baileys-WhatsApp%20API-25D366?logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
 [![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
 
@@ -415,7 +415,9 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 
 ## 📄 Licence
 
-Ce projet est distribué sous une licence propriétaire stricte. Voir [LICENSE](LICENSE) pour les conditions complètes.
+Le code source est sous licence [MIT](LICENSE).
+
+Les contenus non-code (images, captures, diagrammes, assets visuels) sont sous [CC BY-NC-ND 4.0](LICENSE-ASSETS.md).
 
 ---
 

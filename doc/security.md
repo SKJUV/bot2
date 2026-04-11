@@ -30,16 +30,11 @@
 
 ## Ce que protège la licence
 
-La licence propriétaire jointe au dépôt couvre:
+Le dépôt applique des licences standards séparées:
 
-- le code source,
-- la documentation,
-- les diagrammes,
-- les images,
-- les captures,
-- les assets générés,
-- les logos et éléments de marque associés.
+- **Code logiciel**: licence MIT (`LICENSE`)
+- **Contenus non-code (assets visuels, diagrammes, captures)**: CC BY-NC-ND 4.0 (`LICENSE-ASSETS.md`)
 
 ## Remarque
 
-La protection juridique réelle dépend aussi de la publication, du dépôt, des mentions de copyright et des conditions d'utilisation. Cette base technique et documentaire ne remplace pas un avis juridique.
+La protection juridique réelle dépend aussi de la publication, des dépôts, des mentions de copyright et des politiques de marque. Cette base technique et documentaire ne remplace pas un avis juridique.
