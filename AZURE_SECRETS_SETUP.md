@@ -4,7 +4,7 @@
 
 ## Étapes
 
-1. Va sur **https://github.com/SKJUV/bot2/settings/secrets/actions**
+1. Va sur la page **Settings > Secrets and variables > Actions** de ton dépôt GitHub
 
 2. Clique sur **"New repository secret"** et ajoute ces 3 secrets :
 
@@ -35,7 +35,7 @@ Une fois les 3 secrets ajoutés :
 
 L'image sera disponible à :
 ```
-faouzbotacr11360.azurecr.io/bot2:latest
+faouzbotacr11360.azurecr.io/whatsapp-bot:latest
 ```
 
 On pourra ensuite déployer sur Azure Container Instances.

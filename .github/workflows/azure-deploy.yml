@@ -7,8 +7,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }} # This will inherently be skjuv/bot2 if repo name remains, but let's change it. Actually, IMAGE_NAME should just be whatsapp-bot. Let's force it.
-  # But since github.repository includes owner context, let's use:
   IMAGE_TAG_NAME: ${{ github.repository_owner }}/whatsapp-bot
 
 jobs:

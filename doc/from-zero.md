@@ -22,7 +22,7 @@ Ce guide décrit la reconstruction complète de la plateforme à partir d'une ma
 ## 2. Structure finale attendue
 
 ```text
-bot2/
+whatsapp-bot/
 ├── index.js
 ├── database.js
 ├── README.md
