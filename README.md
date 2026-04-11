@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Baileys](https://img.shields.io/badge/Baileys-WhatsApp%20API-25D366?logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
 [![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 </div>
 
@@ -25,6 +25,7 @@
 - [Architecture du projet](#-architecture-du-projet)
 - [Ajouter une commande](#-ajouter-une-commande)
 - [Fonctionnalités prévues](#-fonctionnalités-prévues)
+- [Documentation plateforme](#-documentation-plateforme)
 - [Contribution](#-contribution)
 - [Licence](#-licence)
 
@@ -414,7 +415,13 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 
 ## 📄 Licence
 
-Ce projet est sous licence [MIT](LICENSE). Vous êtes libre de l'utiliser, le modifier et le distribuer.
+Ce projet est distribué sous une licence propriétaire stricte. Voir [LICENSE](LICENSE) pour les conditions complètes.
+
+---
+
+## 📚 Documentation plateforme
+
+La documentation complète de la plateforme multi-instance est disponible dans le dossier [doc](doc/README.md).
 
 ---
 
@@ -422,6 +429,5 @@ Ce projet est sous licence [MIT](LICENSE). Vous êtes libre de l'utiliser, le mo
 
 **⭐ Si ce projet vous plaît, n'hésitez pas à lui donner une étoile !**
 
-Made with ❤️
 
 </div>
